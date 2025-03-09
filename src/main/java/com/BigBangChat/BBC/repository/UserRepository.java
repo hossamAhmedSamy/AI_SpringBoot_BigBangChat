@@ -1,6 +1,6 @@
-package repository;
+package com.BigBangChat.BBC.repository;
 
-import entities.UserEntity;
+import com.BigBangChat.BBC.entities.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
