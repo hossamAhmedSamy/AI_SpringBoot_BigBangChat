@@ -2,9 +2,15 @@ package com.BigBangChat.BBC.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.provisioning.UserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
 
 import javax.sql.DataSource;
 
@@ -12,9 +18,19 @@ import javax.sql.DataSource;
 @EnableWebSecurity
 public class SecurityConfig {
 
+
     @Bean
-    public UserDetailsManager UserDetailsManager(DataSource dataSource)
-    {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(authorize -> authorize.requestMatchers(HttpMethod.GET,"/api/**").hasRole("USER"));
+
+
+        http.httpBasic(Customizer.withDefaults());
+        http.csrf(csrf -> csrf.disable());
+        return http.build();
+    }
+
+    @Bean
+    public UserDetailsManager UserDetailsManager(DataSource dataSource) {
         return new JdbcUserDetailsManager(dataSource);
     }
 }
