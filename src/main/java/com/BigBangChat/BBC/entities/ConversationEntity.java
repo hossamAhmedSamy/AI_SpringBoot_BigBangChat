@@ -1,5 +1,6 @@
 package com.BigBangChat.BBC.entities;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.util.List;
@@ -16,6 +17,7 @@ public class ConversationEntity {
     private UserEntity user;
 
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference  // 👈 Marks this as the parent reference
     private List<MessageEntity> messages;
 
     public Integer getId() {

@@ -1,6 +1,8 @@
 package com.BigBangChat.BBC.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,13 +17,14 @@ public class MessageEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role Role;
+    private Role role;
 
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
     @ManyToOne
     @JoinColumn(name = "conversation_id", nullable = false)
+    @JsonBackReference
     private ConversationEntity conversation;
 
 
@@ -29,13 +32,11 @@ public class MessageEntity {
     }
 
 
-
     public MessageEntity(String text, Role role, ConversationEntity conversation) {
         this.text = text;
-        Role = role;
+        this.role = role; // Use lowercase 'role'
         this.conversation = conversation;
         this.timestamp = LocalDateTime.now();
-
     }
 
     public Integer getId() {
@@ -55,11 +56,11 @@ public class MessageEntity {
     }
 
     public Role getRole() {
-        return Role;
+        return role;
     }
 
     public void setRole(Role role) {
-        Role = role;
+        this.role = role;
     }
 
     public LocalDateTime getTimestamp() {

@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface ChatService {
     ConversationEntity startConversation(Integer userid);
-    MessageEntity sendMessage(Integer Conversationid , String message, Role role);
+    void sendMessage(Integer Conversationid , String message, Role role);
     List<MessageEntity> getConversation(Integer conversationid);
 }
