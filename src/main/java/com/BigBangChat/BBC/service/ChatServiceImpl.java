@@ -1,9 +1,7 @@
 package com.BigBangChat.BBC.service;
 
-import com.BigBangChat.BBC.entities.ConversationEntity;
-import com.BigBangChat.BBC.entities.MessageEntity;
-import com.BigBangChat.BBC.entities.Role;
-import com.BigBangChat.BBC.entities.UserEntity;
+import com.BigBangChat.BBC.entities.*;
+import com.BigBangChat.BBC.repository.AIResponseRepository;
 import com.BigBangChat.BBC.repository.ConversationRepository;
 import com.BigBangChat.BBC.repository.MessageRepository;
 import com.BigBangChat.BBC.repository.UserRepository;
@@ -11,10 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -22,6 +17,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class ChatServiceImpl implements ChatService {
@@ -33,6 +29,16 @@ public class ChatServiceImpl implements ChatService {
 
     @Value("${deepseek.api.key}") // Store in application.properties
     private String deepSeekApiKey;
+
+    @Value("${gemini.api.url}") // Store in application.properties
+    private String geminiApiUrl;
+
+    @Value("${gemini.api.key}") // Store in application.properties
+    private String geminiApiKey;
+
+
+    @Autowired
+    private AIResponseRepository aiResponseRepository;
 
 
     @Autowired
@@ -73,15 +79,44 @@ public class ChatServiceImpl implements ChatService {
         messageRepository.save(userMessage);
 
         if (role == Role.USER) {
-            // Call DeepSeek
-            String botResponse = callDeepSeek(text);
+            // Start asynchronous calls
+            CompletableFuture<String> seekFuture = CompletableFuture.supplyAsync(() -> callDeepSeek(text));
+            CompletableFuture<String> gemiFuture = CompletableFuture.supplyAsync(() -> callGemini(text));
 
-            if (botResponse != null && !botResponse.isEmpty()) {
-                MessageEntity botMessage = new MessageEntity(botResponse, Role.BOT, conversation);
+            // Process when both complete
+            seekFuture.thenCombine(gemiFuture, (seekResponse, gemiResponse) -> {
+                // Handle partial failures
+                String finalSeek = (seekResponse != null) ? seekResponse : "DeepSeek failed";
+                String finalGemi = (gemiResponse != null) ? gemiResponse : "Gemini failed";
+
+                // Save AI responses
+                AIResponseEntity aiResponse = new AIResponseEntity(userMessage, finalSeek, finalGemi);
+                aiResponseRepository.save(aiResponse);
+
+                // Select best response (TODO: Implement logic)
+                String bestResponse = selectBestResponse(text,finalSeek, finalGemi);
+
+                // Save bot response
+                MessageEntity botMessage = new MessageEntity(bestResponse, Role.BOT, conversation);
                 messageRepository.save(botMessage);
-            }
-        }
 
+                return null;
+            }).exceptionally(ex -> {
+                ex.printStackTrace(); // Log error
+                return null;
+            });
+        }
+    }
+
+    private String selectBestResponse(String userText, String seekResponse, String gemiResponse) {
+        String prompt = "A user sent the following message:\n"
+                + "User: " + userText + "\n\n"
+                + "Two AI models responded:\n"
+                + "Response 1: " + seekResponse + "\n"
+                + "Response 2: " + gemiResponse + "\n\n"
+                + "Your task: Select the best response based on clarity, relevance, and completeness. If necessary, merge the two responses into a single, better response. Return only the final chosen response.";
+
+        return null;  //callLocalAI(prompt);
     }
 
 
@@ -124,4 +159,37 @@ public class ChatServiceImpl implements ChatService {
             return "Error: Unable to process request.";
         }
     }
+    public String callGemini(String prompt) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // Construct the request body
+            Map<String, Object> requestBody = new HashMap<>();
+            Map<String, Object> contents = new HashMap<>();
+            Map<String, String> parts = new HashMap<>();
+
+            parts.put("text", prompt);
+            contents.put("parts", List.of(parts));
+            requestBody.put("contents", List.of(contents));
+
+            // Append API key as a query parameter
+            String urlWithApiKey = geminiApiUrl + "?key=" + geminiApiKey;
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            ResponseEntity<String> response = restTemplate.exchange(urlWithApiKey, HttpMethod.POST, request, String.class);
+
+            // Parse JSON response
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+
+            // Extract AI response from JSON
+            return rootNode.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+        } catch (Exception e) {
+            e.printStackTrace();  // Log error
+            return "Error: Unable to process request.";
+        }
+    }
+
+
 }

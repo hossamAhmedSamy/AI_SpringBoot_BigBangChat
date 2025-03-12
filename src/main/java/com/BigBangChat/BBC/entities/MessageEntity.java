@@ -22,10 +22,15 @@ public class MessageEntity {
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
+
     @ManyToOne
     @JoinColumn(name = "conversation_id", nullable = false)
     @JsonBackReference
     private ConversationEntity conversation;
+
+    @OneToOne(mappedBy = "userMessage", cascade = CascadeType.ALL)
+    private AIResponseEntity aiResponse;
+
 
 
     public MessageEntity() {
@@ -78,5 +83,14 @@ public class MessageEntity {
     public void setConversation(ConversationEntity conversation) {
         this.conversation = conversation;
     }
+
+    public AIResponseEntity getAiResponse() {
+        return aiResponse;
+    }
+
+    public void setAiResponse(AIResponseEntity aiResponse) {
+        this.aiResponse = aiResponse;
+    }
+
 
 }
