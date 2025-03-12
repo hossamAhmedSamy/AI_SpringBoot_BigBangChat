@@ -9,7 +9,7 @@ public class AIResponseEntity {
     private Integer id;
 
     @OneToOne
-    @JoinColumn(name = "user_message_id", nullable = false)
+    @JoinColumn(name = "user_message_id")
     private MessageEntity userMessage; // Link to the user's message
 
     @Column(columnDefinition = "TEXT")
@@ -35,7 +35,7 @@ public class AIResponseEntity {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Integer  id) {
         this.id = id;
     }
 
