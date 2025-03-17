@@ -5,8 +5,10 @@ import com.BigBangChat.BBC.repository.AIResponseRepository;
 import com.BigBangChat.BBC.repository.ConversationRepository;
 import com.BigBangChat.BBC.repository.MessageRepository;
 import com.BigBangChat.BBC.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -69,9 +71,9 @@ public class ChatServiceImpl implements ChatService {
         conversation.setUser(user);
         return conversationRepository.save(conversation);
     }
-
+    @Transactional
     @Override
-    public void sendMessage(Integer conversationId, String text, Role role) {
+    public CompletableFuture<Void> sendMessage(Integer conversationId, String text, Role role) {
         ConversationEntity conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
 
@@ -79,45 +81,48 @@ public class ChatServiceImpl implements ChatService {
         messageRepository.save(userMessage);
 
         if (role == Role.USER) {
-            // Start asynchronous calls
+            // Start asynchronous API calls
             CompletableFuture<String> seekFuture = CompletableFuture.supplyAsync(() -> callDeepSeek(text));
             CompletableFuture<String> gemiFuture = CompletableFuture.supplyAsync(() -> callGemini(text));
 
-            // Process when both complete
-            seekFuture.thenCombine(gemiFuture, (seekResponse, gemiResponse) -> {
-                // Handle partial failures
-                String finalSeek = (seekResponse != null) ? seekResponse : "DeepSeek failed";
-                String finalGemi = (gemiResponse != null) ? gemiResponse : "Gemini failed";
+            return seekFuture.thenCombine(gemiFuture, (seekResponse, gemiResponse) -> {
+                        // Handle API failures
+                        String finalSeek = (seekResponse != null) ? seekResponse : "DeepSeek failed.";
+                        String finalGemi = (gemiResponse != null) ? gemiResponse : "Gemini failed.";
 
-                // Save AI responses
-                AIResponseEntity aiResponse = new AIResponseEntity(userMessage, finalSeek, finalGemi);
-                aiResponseRepository.save(aiResponse);
+                        // Save AI responses
+                        AIResponseEntity aiResponse = new AIResponseEntity(userMessage, finalSeek, finalGemi);
+                        aiResponseRepository.save(aiResponse);
 
-                // Select best response (TODO: Implement logic)
-                String bestResponse = selectBestResponse(text,finalSeek, finalGemi);
+                        // **Step 2: Select the best response asynchronously**
+                        return CompletableFuture.supplyAsync(() -> selectBestResponse(text, finalSeek, finalGemi))
+                                .thenAccept(bestResponse -> {
+                                    // Ensure AI has completed selection
+                                    System.out.println("-=============sosososo : "+bestResponse);
+                                    if (bestResponse == null || bestResponse.isEmpty()) {
+                                        bestResponse = "No suitable response found.";
+                                        System.out.println(bestResponse);
+                                    }
 
-                // Save bot response
-                MessageEntity botMessage = new MessageEntity(bestResponse, Role.BOT, conversation);
-                messageRepository.save(botMessage);
+                                    // Save bot response
+                                    MessageEntity botMessage = new MessageEntity(bestResponse, Role.BOT, conversation);
+                                    messageRepository.save(botMessage);
 
-                return null;
-            }).exceptionally(ex -> {
-                ex.printStackTrace(); // Log error
-                return null;
-            });
+                                    // Update AIResponseEntity with the selected response
+                                    aiResponse.setFinalSelectedResponse(bestResponse);
+                                    aiResponseRepository.save(aiResponse);
+                                });
+                    }).thenCompose(future -> future) // Ensures correct async flow
+                    .exceptionally(ex -> {
+                        ex.printStackTrace();
+                        return null;
+                    });
         }
+
+        return CompletableFuture.completedFuture(null);
     }
 
-    private String selectBestResponse(String userText, String seekResponse, String gemiResponse) {
-        String prompt = "A user sent the following message:\n"
-                + "User: " + userText + "\n\n"
-                + "Two AI models responded:\n"
-                + "Response 1: " + seekResponse + "\n"
-                + "Response 2: " + gemiResponse + "\n\n"
-                + "Your task: Select the best response based on clarity, relevance, and completeness. If necessary, merge the two responses into a single, better response. Return only the final chosen response.";
 
-        return null;  //callLocalAI(prompt);
-    }
 
 
     @Override
@@ -190,6 +195,52 @@ public class ChatServiceImpl implements ChatService {
             return "Error: Unable to process request.";
         }
     }
+    public String selectBestResponse(String userText, String seekResponse, String gemiResponse) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // Construct the Ollama prompt
+        String prompt = "A user sent the following message:\n"
+                + "User: " + userText + "\n\n"
+                + "Two AI models responded:\n"
+                + "Response 1: " + seekResponse + "\n"
+                + "Response 2: " + gemiResponse + "\n\n"
+                + "Your task: Select the best response based on clarity, relevance, and completeness. "
+                + "If necessary, merge the two responses into a single, better response. "
+                + "Return only the final chosen response.";
+
+        // Create the request body
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "deepseek-r1:7b"); // Your Ollama model
+        requestBody.put("prompt", prompt);
+        requestBody.put("stream", false); // Disable streaming
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+        try {
+            // Call Ollama API
+            ResponseEntity<String> response = restTemplate.exchange(
+                    "http://localhost:11434/api/generate", // Ollama endpoint
+                    HttpMethod.POST,
+                    request,
+                    String.class
+            );
+
+            // Parse JSON response safely
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+
+            // Extract AI-selected response
+            return rootNode.path("response").asText();
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return "Error: Unable to process AI response.";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error: AI selection failed.";
+        }
+    }
+
 
 
 }

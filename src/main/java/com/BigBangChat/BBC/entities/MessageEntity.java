@@ -12,7 +12,7 @@ public class MessageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false, length = 500)
+    @Column(columnDefinition = "LONGTEXT")
     private String text;
 
     @Enumerated(EnumType.STRING)

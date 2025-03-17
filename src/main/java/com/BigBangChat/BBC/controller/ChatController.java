@@ -36,4 +36,13 @@ public class ChatController {
     public List<MessageEntity> getConversation(@PathVariable Integer conversationId) {
         return chatService.getConversation(conversationId);
     }
+
+    // Send a message to a conversation
+    @PostMapping("/testselect")
+    public String selectBestResponse(@RequestParam String text,
+                              @RequestParam String seek,
+                              @RequestParam String gemi) {
+        chatService.selectBestResponse(text, seek, gemi);
+        return "Message sent!";
+    }
 }

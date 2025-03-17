@@ -12,13 +12,13 @@ public class AIResponseEntity {
     @JoinColumn(name = "user_message_id")
     private MessageEntity userMessage; // Link to the user's message
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String deepSeekResponse;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String geminiResponse;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String finalSelectedResponse; // AI-selected best response
 
     // Constructors
@@ -70,4 +70,5 @@ public class AIResponseEntity {
     public void setFinalSelectedResponse(String finalSelectedResponse) {
         this.finalSelectedResponse = finalSelectedResponse;
     }
+
 }
