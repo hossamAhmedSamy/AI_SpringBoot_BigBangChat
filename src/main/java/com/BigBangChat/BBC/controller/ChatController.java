@@ -1,3 +1,4 @@
+/*
 package com.BigBangChat.BBC.controller;
 
 import com.BigBangChat.BBC.entities.MessageEntity;
@@ -44,5 +45,25 @@ public class ChatController {
                               @RequestParam String gemi) {
         chatService.selectBestResponse(text, seek, gemi);
         return "Message sent!";
+    }
+}
+
+*/
+
+package com.BigBangChat.BBC.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+@Controller
+@RequestMapping("/chat")
+public class ChatController {
+
+    // Serve the chat UI for a specific conversation
+    @GetMapping("/{conversationId}")
+    public String chatPage(@PathVariable Integer conversationId, Model model) {
+        model.addAttribute("conversationId", conversationId);
+        return "chat"; // Refers to src/main/resources/templates/chat.html
     }
 }

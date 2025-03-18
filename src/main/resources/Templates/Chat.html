@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Chat</title>
+    <script>
+        function loadMessages() {
+            let conversationId = document.getElementById("conversationId").value;
+            fetch(`/api/chat/${conversationId}`)
+                .then(response => response.json())
+                .then(messages => {
+                    let chatBox = document.getElementById("chat-box");
+                    chatBox.innerHTML = "";
+                    messages.forEach(msg => {
+                        let messageDiv = document.createElement("div");
+                        messageDiv.textContent = msg.role + ": " + msg.text;
+                        chatBox.appendChild(messageDiv);
+                    });
+                })
+                .catch(error => console.error("Error loading messages:", error));
+        }
+
+        function sendMessage() {
+            let conversationId = document.getElementById("conversationId").value;
+            let text = document.getElementById("message").value;
+
+            fetch("/api/chat/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `conversationId=${conversationId}&text=${encodeURIComponent(text)}`
+            })
+            .then(() => {
+                document.getElementById("message").value = "";
+                loadMessages(); // Refresh chat
+            })
+            .catch(error => console.error("Error sending message:", error));
+        }
+
+        window.onload = loadMessages;
+    </script>
+</head>
+<body>
+<h2>Chat</h2>
+<input type="hidden" id="conversationId" th:value="${conversationId}" />
+<div id="chat-box"></div>
+<input type="text" id="message" placeholder="Type a message..." />
+<button onclick="sendMessage()">Send</button>
+</body>
+</html>
