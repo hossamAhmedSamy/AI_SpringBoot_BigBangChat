@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -24,8 +25,8 @@ public class ChatRestController {
         return chatService.getConversation(conversationId);
     }
 
-    // Get messages after a specific timestamp
-/*    @GetMapping("/{conversationId}/after/{timestamp}")
+    // Get messages after a specific timestamp (Uncomment this method)
+    @GetMapping("/{conversationId}/after/{timestamp}")
     public List<MessageEntity> getMessagesAfterTimestamp(
             @PathVariable Integer conversationId,
             @PathVariable Long timestamp) {
@@ -34,11 +35,15 @@ public class ChatRestController {
                 ZoneId.systemDefault()
         );
         return chatService.getMessagesAfterTimestamp(conversationId, afterTime);
-    }*/
+    }
 
     // Send a message via API
     @PostMapping("/send")
     public void sendMessage(@RequestParam Integer conversationId, @RequestParam String text) {
-        chatService.sendMessage(conversationId, text, Role.USER);
+        CompletableFuture<Void> future = chatService.sendMessage(conversationId, text, Role.USER);
+
+        // Make sure the future completes before returning
+        // This is optional - only if you want to wait for the completion
+        // future.join();
     }
 }

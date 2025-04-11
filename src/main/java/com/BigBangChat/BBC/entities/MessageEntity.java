@@ -1,6 +1,7 @@
 package com.BigBangChat.BBC.entities;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -29,6 +30,7 @@ public class MessageEntity {
     private ConversationEntity conversation;
 
     @OneToOne(mappedBy = "userMessage", cascade = CascadeType.ALL)
+    @JsonManagedReference // This is the "forward" part of the reference
     private AIResponseEntity aiResponse;
 
 

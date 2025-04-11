@@ -1,5 +1,6 @@
 package com.BigBangChat.BBC.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -10,7 +11,8 @@ public class AIResponseEntity {
 
     @OneToOne
     @JoinColumn(name = "user_message_id")
-    private MessageEntity userMessage; // Link to the user's message
+    @   JsonBackReference // This is the "back" part that won't be serialized
+    private MessageEntity userMessage;
 
     @Column(columnDefinition = "LONGTEXT")
     private String deepSeekResponse;

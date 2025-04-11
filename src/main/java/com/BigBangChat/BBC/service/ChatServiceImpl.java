@@ -15,6 +15,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -122,6 +123,16 @@ public class ChatServiceImpl implements ChatService {
         }
 
         return CompletableFuture.completedFuture(null);
+    }
+
+    @Override
+    public List<MessageEntity> getMessagesAfterTimestamp(Integer conversationId, LocalDateTime timestamp) {
+        // First verify that the conversation exists
+        conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        // Then retrieve messages after the given timestamp
+        return messageRepository.findByConversationIdAndTimestampAfter(conversationId, timestamp);
     }
 
 
