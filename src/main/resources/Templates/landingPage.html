@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>BigBangChat - AI-Powered Chat Application</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans">
+<nav class="bg-blue-600 text-white p-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-2xl font-bold">BigBangChat</h1>
+        <div>
+            <a href="/login" class="px-4 py-2 rounded bg-blue-500 hover:bg-blue-700 mr-2">Login</a>
+            <a href="/register" class="px-4 py-2 rounded bg-green-500 hover:bg-green-700">Register</a>
+        </div>
+    </div>
+</nav>
+
+<header class="bg-blue-500 text-white text-center py-16">
+    <div class="container mx-auto">
+        <h2 class="text-4xl font-bold mb-4">Experience the Power of Dual AI</h2>
+        <p class="text-xl mb-8">BigBangChat combines DeepSeek and Gemini for the best possible responses to your questions</p>
+        <a href="/register" class="px-6 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100 shadow-lg">Get Started</a>
+    </div>
+</header>
+
+<section class="py-12">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-bold mb-3 text-blue-600">Intelligent Responses</h3>
+                <p>Our system compares responses from multiple AI models and selects the best answer for you.</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-bold mb-3 text-blue-600">Seamless Experience</h3>
+                <p>Chat with AI assistants that understand context and provide relevant, helpful information.</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-bold mb-3 text-blue-600">Personal Account</h3>
+                <p>Create an account to save your conversations and access them from anywhere.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="bg-gray-800 text-white py-8">
+    <div class="container mx-auto text-center">
+        <p>&copy; 2025 BigBangChat. All rights reserved.</p>
+    </div>
+</footer>
+</body>
+</html>

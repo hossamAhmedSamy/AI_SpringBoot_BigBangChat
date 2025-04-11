@@ -59,8 +59,6 @@ import org.springframework.web.bind.annotation.*;
 @Controller
 @RequestMapping("/chat")
 public class ChatController {
-
-    // Serve the chat UI for a specific conversation
     @GetMapping("/{conversationId}")
     public String chatPage(@PathVariable Integer conversationId, Model model) {
         model.addAttribute("conversationId", conversationId);

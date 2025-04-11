@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>BigBangChat - My Conversations</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans">
+<nav class="bg-blue-600 text-white p-4">
+  <div class="container mx-auto flex justify-between items-center">
+    <h1 class="text-2xl font-bold">BigBangChat</h1>
+    <div>
+      <a href="/" class="px-4 py-2">Home</a>
+      <a href="/conversations" class="px-4 py-2 font-bold">My Conversations</a>
+      <a href="/logout" class="px-4 py-2 rounded bg-red-500 hover:bg-red-700">Logout</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 py-8">
+  <div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold">My Conversations</h2>
+      <button id="start-conversation" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        <i class="fas fa-plus mr-2"></i>Start New Conversation
+      </button>
+    </div>
+
+    <div id="conversations-list" class="divide-y">
+      <!-- Conversations will be loaded here -->
+      <div class="py-4 text-center text-gray-500" id="loading">
+        Loading conversations...
+      </div>
+      <div class="hidden py-4 text-center text-gray-500" id="no-conversations">
+        You haven't started any conversations yet.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Load conversations for the current user
+  function loadConversations() {
+      // For demo purposes, using user ID 1
+      const userId = 1;
+
+      document.getElementById('loading').style.display = 'block';
+
+      fetch(`/api/users/${userId}/conversations`)
+          .then(response => response.json())
+          .then(conversations => {
+              document.getElementById('loading').style.display = 'none';
+              const conversationsList = document.getElementById('conversations-list');
+
+              if (conversations.length === 0) {
+                  document.getElementById('no-conversations').style.display = 'block';
+                  return;
+              }
+
+              // Clear existing content
+              conversationsList.innerHTML = '';
+
+              conversations.forEach(conversation => {
+                  const lastMessage = conversation.lastMessage || { text: 'No messages yet', timestamp: new Date() };
+                  const date = new Date(lastMessage.timestamp);
+                  const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                  const conversationDiv = document.createElement('div');
+                  conversationDiv.className = 'py-4 flex items-center justify-between hover:bg-blue-50 px-4 rounded cursor-pointer';
+                  conversationDiv.onclick = () => {
+                      window.location.href = `/chat/${conversation.id}`;
+                  };
+
+                  conversationDiv.innerHTML = `
+                      <div>
+                          <h3 class="font-medium">Conversation #${conversation.id}</h3>
+                          <p class="text-gray-600 text-sm truncate w-64">${lastMessage.text}</p>
+                      </div>
+                      <div class="text-right">
+                          <div class="text-xs text-gray-500">${formattedDate}</div>
+                          <div class="mt-1">
+                              <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded">
+                                  ${conversation.messages.length} messages
+                              </span>
+                          </div>
+                      </div>
+                  `;
+
+                  conversationsList.appendChild(conversationDiv);
+              });
+          })
+          .catch(error => {
+              console.error("Error loading conversations:", error);
+              document.getElementById('loading').textContent = 'Error loading conversations. Please try again later.';
+          });
+  }
+
+  // Start new conversation button
+  document.getElementById("start-conversation").addEventListener("click", function() {
+      // For demo purposes, using user ID 1
+      const userId = 1;
+
+      fetch(`/chat/start/${userId}`, {
+          method: "POST"
+      })
+      .then(response => response.text())
+      .then(data => {
+          // Extract conversation ID from response
+          const match = data.match(/\d+/);
+          if (match) {
+              window.location.href = `/chat/${match[0]}`;
+          }
+      })
+      .catch(error => console.error("Error creating conversation:", error));
+  });
+
+  // Load conversations on page load
+  window.onload = loadConversations;
+</script>
+</body>
+</html>

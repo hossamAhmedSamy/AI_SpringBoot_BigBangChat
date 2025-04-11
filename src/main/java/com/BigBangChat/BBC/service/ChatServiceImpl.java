@@ -54,7 +54,9 @@ public class ChatServiceImpl implements ChatService {
 
 
     @Autowired
-    public ChatServiceImpl(RestTemplate restTemplate, UserRepository userRepository, ConversationRepository conversationRepository, MessageRepository messageRepository) {
+    public ChatServiceImpl(RestTemplate restTemplate, UserRepository userRepository,
+                           ConversationRepository conversationRepository,
+                           MessageRepository messageRepository) {
         this.restTemplate = restTemplate;
         this.userRepository = userRepository;
         this.conversationRepository = conversationRepository;

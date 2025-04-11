@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>BigBangChat - Chat</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        .message-box {
+            height: calc(100vh - 300px);
+            overflow-y: auto;
+        }
+        .message {
+            max-width: 80%;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            padding: 10px 15px;
+            border-radius: 15px;
+            position: relative;
+            word-wrap: break-word;
+        }
+        .message-user {
+            background: #E3F2FD;
+            color: #000;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+        .message-bot {
+            background: #F5F5F5;
+            color: #000;
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+        .typing-indicator {
+            display: none;
+            background: #F5F5F5;
+            padding: 10px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+        }
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #3B82F6;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 2px;
+            animation: blink 1s linear infinite;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes blink {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">BigBangChat</h1>
+            <div>
+                <a href="/" class="px-4 py-2">Home</a>
+                <a href="/conversations" class="px-4 py-2">My Conversations</a>
+                <a href="/logout" class="px-4 py-2 rounded bg-red-500 hover:bg-red-700">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-md p-4 chat-container">
+            <div class="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 class="text-xl font-bold" th:text="'Conversation #' + ${conversationId}">Conversation</h2>
+                <button id="new-conversation" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    New Conversation
+                </button>
+            </div>
+            
+            <div id="chat-box" class="message-box">
+                <!-- Messages will be loaded here -->
+                <div class="typing-indicator" id="typing">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            
+            <div class="mt-4 border-t pt-4">
+                <div class="flex">
+                    <input type="text" id="message" placeholder="Type your message..." 
+                        class="flex-grow px-4 py-2 border rounded-l focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <button onclick="sendMessage()" 
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-r">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="conversationId" th:value="${conversationId}" />
+
+    <script>
+        // Function to format the timestamp
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        // Load messages function
+        function loadMessages() {
+            let conversationId = document.getElementById("conversationId").value;
+            fetch(`/api/chat/${conversationId}`)
+                .then(response => response.json())
+                .then(messages => {
+                    let chatBox = document.getElementById("chat-box");
+                    chatBox.innerHTML = ""; // Clear existing messages
+                    
+                    // Add typing indicator (hidden initially)
+                    let typingIndicator = document.createElement("div");
+                    typingIndicator.className = "typing-indicator";
+                    typingIndicator.id = "typing";
+                    typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+                    chatBox.appendChild(typingIndicator);
+                    
+                    if (messages.length === 0) {
+                        let welcomeDiv = document.createElement("div");
+                        welcomeDiv.className = "message message-bot";
+                        welcomeDiv.textContent = "Welcome to BigBangChat! How can I help you today?";
+                        chatBox.appendChild(welcomeDiv);
+                    } else {
+                        messages.forEach(msg => {
+                            let messageDiv = document.createElement("div");
+                            messageDiv.className = msg.role === "USER" ? "message message-user" : "message message-bot";
+                            
+                            let textSpan = document.createElement("div");
+                            textSpan.textContent = msg.text;
+                            messageDiv.appendChild(textSpan);
+                            
+                            let timeSpan = document.createElement("div");
+                            timeSpan.className = "text-xs text-gray-500 mt-1";
+                            timeSpan.textContent = formatTime(msg.timestamp);
+                            messageDiv.appendChild(timeSpan);
+                            
+                            chatBox.insertBefore(messageDiv, document.getElementById("typing"));
+                        });
+                    }
+                    
+                    // Scroll to the bottom
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                })
+                .catch(error => console.error("Error loading messages:", error));
+        }
+
+        // Send message function
+        function sendMessage() {
+            let messageInput = document.getElementById("message");
+            let message = messageInput.value.trim();
+            if (!message) return;
+            
+            let conversationId = document.getElementById("conversationId").value;
+            
+            // Clear input and show typing indicator
+            messageInput.value = "";
+            document.getElementById("typing").style.display = "block";
+            
+            // Add user message immediately (for better UX)
+            let chatBox = document.getElementById("chat-box");
+            let userMessageDiv = document.createElement("div");
+            userMessageDiv.className = "message message-user";
+            
+            let textSpan = document.createElement("div");
+            textSpan.textContent = message;
+            userMessageDiv.appendChild(textSpan);
+            
+            let timeSpan = document.createElement("div");
+            timeSpan.className = "text-xs text-gray-500 mt-1";
+            timeSpan.textContent = formatTime(new Date());
+            userMessageDiv.appendChild(timeSpan);
+            
+            chatBox.insertBefore(userMessageDiv, document.getElementById("typing"));
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            // Send to server
+            fetch("/api/chat/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `conversationId=${conversationId}&text=${encodeURIComponent(message)}`
+            })
+            .then(() => {
+                // Wait a bit before refreshing (to allow server time to process)
+                setTimeout(() => {
+                    loadMessages();
+                    document.getElementById("typing").style.display = "none";
+                }, 2000);
+            })
+            .catch(error => {
+                console.error("Error sending message:", error);
+                document.getElementById("typing").style.display = "none";
+            });
+        }
+
+        // Handle Enter key press
+        document.getElementById("message").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // New conversation button
+        document.getElementById("new-conversation").addEventListener("click", function() {
+            // Get user ID from session or URL parameter
+            // For demo purposes, using user ID 1
+            const userId = 1;
+            
+            fetch(`/chat/start/${userId}`, {
+                method: "POST"
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Extract conversation ID from response
+                const match = data.match(/\d+/);
+                if (match) {
+                    window.location.href = `/chat/${match[0]}`;
+                }
+            })
+            .catch(error => console.error("Error creating conversation:", error));
+        });
+
+        // Load messages on page load
+        window.onload = loadMessages;
+    </script>
+</body>
+</html>
