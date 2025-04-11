@@ -132,27 +132,28 @@
                 typingIndicator.innerHTML = '<span></span><span></span><span></span>';
                 chatBox.appendChild(typingIndicator);
 
+                messages.forEach(msg => {
+                    let messageDiv = document.createElement("div");
+                    messageDiv.className = msg.role === "USER" ? "message message-user" : "message message-bot";
+
+                    let textSpan = document.createElement("div");
+                    textSpan.textContent = msg.text;
+                    messageDiv.appendChild(textSpan);
+
+                    let timeSpan = document.createElement("div");
+                    timeSpan.className = "text-xs text-gray-500 mt-1";
+                    timeSpan.textContent = formatTime(msg.timestamp);
+                    messageDiv.appendChild(timeSpan);
+
+                    chatBox.insertBefore(messageDiv, document.getElementById("typing"));
+                });
+
+                // Only show welcome message if it's a fresh conversation
                 if (messages.length === 0) {
                     let welcomeDiv = document.createElement("div");
                     welcomeDiv.className = "message message-bot";
                     welcomeDiv.textContent = "Welcome to BigBangChat! How can I help you today?";
-                    chatBox.appendChild(welcomeDiv);
-                } else {
-                    messages.forEach(msg => {
-                        let messageDiv = document.createElement("div");
-                        messageDiv.className = msg.role === "USER" ? "message message-user" : "message message-bot";
-
-                        let textSpan = document.createElement("div");
-                        textSpan.textContent = msg.text;
-                        messageDiv.appendChild(textSpan);
-
-                        let timeSpan = document.createElement("div");
-                        timeSpan.className = "text-xs text-gray-500 mt-1";
-                        timeSpan.textContent = formatTime(msg.timestamp);
-                        messageDiv.appendChild(timeSpan);
-
-                        chatBox.insertBefore(messageDiv, document.getElementById("typing"));
-                    });
+                    chatBox.insertBefore(welcomeDiv, document.getElementById("typing"));
                 }
 
                 // Scroll to the bottom
@@ -197,16 +198,54 @@
             body: `conversationId=${conversationId}&text=${encodeURIComponent(message)}`
         })
         .then(() => {
-            // Wait a bit before refreshing (to allow server time to process)
-            setTimeout(() => {
-                loadMessages();
-                document.getElementById("typing").style.display = "none";
-            }, 2000);
+            // Start polling for response
+            startResponsePolling(conversationId);
         })
         .catch(error => {
             console.error("Error sending message:", error);
             document.getElementById("typing").style.display = "none";
         });
+    }
+
+    // New function to poll for responses
+    function startResponsePolling(conversationId) {
+        const currentMessageCount = document.querySelectorAll('.message').length;
+
+        let pollCount = 0;
+        const maxPolls = 15; // Max 30 seconds (15 * 2s)
+
+        const pollInterval = setInterval(() => {
+            fetch(`/api/chat/${conversationId}`)
+                .then(response => response.json())
+                .then(messages => {
+                    // Check if we have a new message (bot response)
+                    if (messages.length > currentMessageCount) {
+                        loadMessages();
+                        document.getElementById("typing").style.display = "none";
+                        clearInterval(pollInterval);
+                    } else {
+                        // Increment poll counter
+                        pollCount++;
+                        if (pollCount >= maxPolls) {
+                            // Stop polling after max attempts
+                            document.getElementById("typing").style.display = "none";
+                            clearInterval(pollInterval);
+                            // Maybe show a timeout message
+                            let timeoutMsg = document.createElement("div");
+                            timeoutMsg.className = "message message-bot";
+                            timeoutMsg.textContent = "The AI is taking longer than expected to respond. Please try again later.";
+                            let chatBox = document.getElementById("chat-box");
+                            chatBox.insertBefore(timeoutMsg, document.getElementById("typing"));
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error polling for messages:", error);
+                    clearInterval(pollInterval);
+                    document.getElementById("typing").style.display = "none";
+                });
+        }, 2000); // Poll every 2 seconds
     }
 
     // Handle Enter key press
