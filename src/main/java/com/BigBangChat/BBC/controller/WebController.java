@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.security.core.Authentication;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -24,7 +26,7 @@ public class WebController {
     // Home page
     @GetMapping("/")
     public String homePage() {
-        return "index";
+        return "landingPage";
     }
 
     // Login page
@@ -67,44 +69,52 @@ public class WebController {
             chatService.startConversation(user.getId());
 
             // Redirect to login page
-            return "redirect:/login?registered=true";
+            return "redirect:/?registered=true";
         } catch (Exception e) {
             model.addAttribute("error", "Registration failed: " + e.getMessage());
             return "register";
+
         }
     }
 
     // Handle login (simplified, implement proper authentication in production)
     @PostMapping("/login")
-    public String processLogin(@RequestParam String email, @RequestParam String password, Model model) {
+    public String processLogin(@RequestParam String email, @RequestParam String password, HttpSession session) {
         // In a real application, use Spring Security for authentication
         // For this example, we're doing a simple check
 
-        // Find user by email - this would need to be added to your UserRepository
-        // For demonstration purposes, we're assuming the first user
-        Optional<UserEntity> userOpt = userRepository.findAll().stream()
-                .filter(u -> u.getMail().equals(email) && u.getPassword().equals(password))
-                .findFirst();
-
+        // Find user by email and password
+        Optional<UserEntity> userOpt = userRepository.findByMail(email)
+                .filter(user -> user.getPassword().equals(password));
+        
         if (userOpt.isPresent()) {
-            // User found, redirect to conversations
-            return "redirect:/conversations";
+           UserEntity user = userOpt.get();
+           session.setAttribute("userId", user.getId());
+           return "redirect:/conversationPage";
         } else {
             // User not found or invalid credentials
             return "redirect:/login?error=true";
         }
     }
-
-    // Conversations page
-    @GetMapping("/conversations")
-    public String conversationsPage() {
-        return "conversations";
+    
+    // conversationPage page
+    @GetMapping("/conversationPage")
+    public String conversationPage() {
+        return "conversationPage";
     }
 
     // Start a new conversation for a user (REST endpoint)
     @PostMapping("/chat/start/{userId}")
     public ResponseEntity<String> startConversation(@PathVariable Integer userId) {
-        ConversationEntity conversation = chatService.startConversation(userId);
-        return ResponseEntity.ok("Conversation started with ID: " + conversation.getId());
+      ConversationEntity conversation = chatService.startConversation(userId);
+      return ResponseEntity.ok("Conversation started with ID: " + conversation.getId());
+    }
+
+    // Get the current logged-in user's ID
+    @GetMapping("/currentUserId")
+    @ResponseBody
+    public Integer getCurrentUserId(Authentication authentication) {
+        String email = authentication.getName(); // Assuming email is the username
+        return userRepository.findByMail(email).map(UserEntity::getId).orElse(null);
     }
 }
